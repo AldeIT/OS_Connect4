@@ -8,6 +8,7 @@ int sem_sync;
 int sem_mutex;
 int * matrix_pointer;
 int * shm_info_attach;
+int count_sigint = 0;
 
 void delete_all(){
     shmctl(shm_matrix_id, IPC_RMID, NULL);
@@ -16,18 +17,50 @@ void delete_all(){
     semctl(sem_mutex, 0, IPC_RMID, NULL);
 }
 
+void perror_exit_server(char * string){
+    perror(string);
+    delete_all();
+    exit(-1);
+}
+
+void sigint_handler(int sig){
+    if (++count_sigint == 2){ //end of game
+        printf("End of Game\n");
+        if (shm_info_attach != NULL){
+            if (shm_info_attach[4] != 0 && shm_info_attach[5]!=0){
+                kill(shm_info_attach[4], SIGUSR1);
+                kill(shm_info_attach[5], SIGUSR1);
+            }
+            
+        }
+        delete_all();
+        exit(-1);
+    }else if (count_sigint == 1){ //warning
+        printf("Next CTRL+C will kill the game!\n");
+    }
+}
+
 
 int main(int argc, char *argv[])
 {
-    /*Cheking if the number of argument is correct.*/
+    /* Cheking if the number of argument is correct. */
     if (argc != 5){
         printf("Errore nei parametri\n");
         return -1;
     }
     
-    /*Getting the info from the command line.*/
+    /* Getting the info from the command line and checking if are acceptable. */
     const int N = stringToInt(argv[1]);
+    if (N < 5){
+        printf("Number or Rows not acceptable...\n");
+        exit(-1);
+    }
     const int M = stringToInt(argv[2]);
+    if (M < 5){
+        printf("Number of Columns not acceptable...\n");
+        exit(-1);
+    }
+
     const char C1Symbol = argv[3][0];
     const char C2Symbol = argv[4][0];
     
@@ -51,57 +84,70 @@ int main(int argc, char *argv[])
         }
         printf("\n");
     }*/
-    struct sembuf sops[3];
 
-    //sembuf -1 -> server
+    if (signal(SIGINT, sigint_handler) == SIG_ERR){
+        perror("Error Handling CTRL+C!\n");
+        exit(-1);
+    }
+    
+
+    /* Sops for the sync semaphores. */
+    struct sembuf sops[3];
+    /* For blocking myself. */
     sops[0].sem_num = 2;
     sops[0].sem_op = -2; // subtract 1 from server semaphore
     sops[0].sem_flg = 0;
-    
-    //sembuf +1 -> client1
+    /* For unblocking the first client. */
     sops[1].sem_num = 0;
     sops[1].sem_op = +1; // add 1 from client1 semaphore
     sops[1].sem_flg = 0;
-
-    //sembuf +1 -> client2
+    /* For unblocking the second client. */
     sops[2].sem_num = 1;
     sops[2].sem_op = +1; // add 1 from client2 semaphore
     sops[2].sem_flg = 0;
 
-
+    /* Creating the shm that store the matrix. */
     if ((shm_matrix_id = shmget(IPC_PRIVATE, sizeof(int) * N * M, IPC_CREAT | 0777)) == -1){
-        perror("Matrix Shared Memory...");
+        /*perror("Matrix Shared Memory...");
         delete_all();
-        exit(-1);
+        exit(-1);*/
+        perror_exit_server("Matrix Shared Memory...");
     }
 
+    /* Attaching to the shm that store the matrix. */
     if ((matrix_pointer = (int *) shmat(shm_matrix_id, NULL, 0)) == NULL){
-        perror("Matrix Shared Memory Attach...");
+        /*perror("Matrix Shared Memory Attach...");
         delete_all();
-        exit(-1);
+        exit(-1);*/
+        perror_exit_server("Matrix Shared Memory Attach...");
     }
-
+    
+    /* Initializing the matrix. */
     for (int i = 0; i < N; i++){
         for (int y=0; y < M; y++){
             matrix_pointer[getCoordinates(N, M, i, y)] = ' ';
         }
     }
 
-
     printf("Inizializzata la matrice...\n");
 
+    /* Creating the shm that store various information. */
     if ((shm_info = shmget(SHMINFO_KEY, sizeof(int) * 10, IPC_CREAT | 0777)) == -1){
-        perror("Info Shared Memory...");
+        /*perror("Info Shared Memory...");
         delete_all();
-        exit(-1);
+        exit(-1);*/
+        perror_exit_server("Info Shared Memory...");
     }
 
+    /* Attaching to the previous shm. */
     if ((shm_info_attach = (int *) shmat(shm_info, NULL, 0)) == NULL){
-        perror("Info Shared Memory Attach...");
+        /*perror("Info Shared Memory Attach...");
         delete_all();
-        exit(-1);
+        exit(-1);*/
+        perror_exit_server("Info Shared Memory Attach...");
     }
 
+    /* Putting info into the shm. */
     shm_info_attach[0] = 0;
     shm_info_attach[1] = C1Symbol;
     shm_info_attach[2] = C2Symbol;
@@ -116,42 +162,47 @@ int main(int argc, char *argv[])
     printf("Inizializzata le info...\n");
 
     if ((sem_sync = semget(SEMSYNC_KEY, 3, IPC_CREAT | IPC_EXCL | 0777))== -1){
-        perror("Semaphore Sync...");
+        /*perror("Semaphore Sync...");
         delete_all();
-        exit(-1);
+        exit(-1);*/
+        perror_exit_server("Semaphore Sync...");
     }
 
     union semun arg;
     short values[3] = {0, 0, 0};
     arg.array = values;
     if ((semctl(sem_sync, 0, SETALL, arg)) == -1){
-        perror("Assigning Sem Sync...");
+        /*perror("Assigning Sem Sync...");
         delete_all();
-        exit(-1);
+        exit(-1);*/
+        perror_exit_server("Assigning Sem Sync...");
     }
 
     printf("Settato il semsync...\n");
 
     if ((sem_mutex = semget(SEMMUTEX_KEY, 1, IPC_CREAT | IPC_EXCL | 0777))== -1){
-        perror("Semaphore Mutex...");
+        /*perror("Semaphore Mutex...");
         delete_all();
-        exit(-1);
+        exit(-1);*/
+        perror_exit_server("Semaphore Mutex...");
     }
 
     arg.val = 1;
     if ((semctl(sem_mutex, 0, SETVAL, arg)) == -1){
-        perror("Assigning Sem Mutex...");
+        /*perror("Assigning Sem Mutex...");
         delete_all();
-        exit(-1);
+        exit(-1);*/
+        perror_exit_server("Assigning Sem Mutex...");
     }
 
     printf("Settato il semmutex...\n");
     printf("Mi blocco...\n");
 
     if ((semop(sem_sync, &sops[0], 1)) == -1){
-        perror("Blocking server...");
+        /*perror("Blocking server...");
         delete_all();
-        exit(-1);
+        exit(-1);*/
+        perror_exit_server("Blocking Server...");
     }
     
     printf("Mi sono sbloccato, dovrebbero essere arrivati i client: %d %d %d\n", getpid(), shm_info_attach[4], shm_info_attach[5]);
@@ -163,36 +214,49 @@ int main(int argc, char *argv[])
     printMatrix(matrix_pointer, N, M);*/
     
     int turn = 0;
-
+    int win;
     sops[0].sem_op = -1;
 
     while(1){
 
         printf("Vai Client %d\n", (turn%2) + 1);
         if (semop(sem_sync, &sops[(turn % 2) + 1], 1) == -1){
-            perror("Error waking the current client...");
-            exit(-1);
+            /*perror("Error waking the current client...");
+            exit(-1);*/
+            perror_exit_server("Error waking the current client...");
         }
 
 
         if (semop(sem_sync, &sops[0], 1) == -1){
-            perror("Error blocking myself...");
-            exit(-1);
+            if (errno = EINTR){
+                if (semop(sem_sync, &sops[0], 1) == -1){
+                    //perror("Reblocking myself...\n");
+                    break;
+                }
+            }
+            else{
+                /*perror("Error blocking myself...");
+                exit(-1);*/
+                perror_exit_server("Error blocking myself...");
+            }
+            
         }
 
         if (!(turn%2)){  // client 0
-            if (check_winner(matrix_pointer, N, M, C1Symbol) == 1){
+            win = check_winner(matrix_pointer, N, M, C1Symbol);
+            if ( win == 1){
                 printf("Partita terminata! Vince: %c\n", C1Symbol);
                 break;
-            }else{
+            }else if(win == -1){
                 printf("Matrice Piena\n");
                 break;
             }
         }else {  //client 1
-            if (check_winner(matrix_pointer, N, M, C2Symbol)){
+            win = check_winner(matrix_pointer, N, M, C2Symbol);
+            if (win == 1){
                 printf("Partita terminata! Vince: %c\n", C2Symbol);
                 break;
-            }else{
+            }else if(win == -1){
                 printf("Matrice Piena\n");
                 break;
             }

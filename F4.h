@@ -1,11 +1,14 @@
 #include <stdio.h>
 #include <sys/sem.h>
 #include <sys/shm.h>
+#include <sys/types.h>
 #include <signal.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <signal.h>
+#include <errno.h>
 
 #define SHMINFO_KEY 1217 //shminfo
 #define SEMSYNC_KEY 2711 //semsync
@@ -30,6 +33,13 @@ int stringToInt(char * string){
     return value;
     
 }
+
+void delete_all();
+
+void perror_exit_server(char *);
+
+void perror_exit_client(char *);
+
 
 int getCoordinates(int N, int M, int x, int y){
     return M*x + y;
