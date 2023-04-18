@@ -49,3 +49,14 @@ void printMatrix(int * matrix, int N, int M){
         printf("\n\n");
     }
 }
+
+void makeMove(int * matrix, int N, int M, int col, char symbol){
+    int i = 0;
+    while(matrix[getCoordinates(N, M, i, col)]==' '){
+        i++;
+    }
+    matrix[getCoordinates(N, M, i-1, col)] = symbol;
+    /*for (int i = col * M; i < N; i ++){
+        matrix[getCoordinates(N, M, i, col)] = symbol;
+    }*/
+}
