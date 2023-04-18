@@ -124,8 +124,9 @@ int check_winner(int *matrix, int n, int m, char symbol){
     /* checking the ascending diagonals (/) */
     for (int i=0; i<m-3; i++){	
         for (int y=3; y<n; y++){													
-            if (matrix[getCoordinates(n, m, i, y)] == symbol && matrix[getCoordinates(n, m, i+1, y-1)] == symbol && matrix[getCoordinates(n, m, i+2, y-2)] == symbol && matrix[getCoordinates(n, m, i+3, y-3)]== symbol)
+            if (matrix[getCoordinates(n, m, y, i)] == symbol && matrix[getCoordinates(n, m, y-1, i+1)] == symbol && matrix[getCoordinates(n, m, y-2, i+2)] == symbol && matrix[getCoordinates(n, m, y-3, i+3)] == symbol){
                 return 1;
+            }
         }
     }
 
