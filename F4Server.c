@@ -31,6 +31,7 @@ int main(int argc, char *argv[])
     ...
     
     */
+   printf("%d\n", check_winner(matrix_pointer, N, M, "0"));
     
 
     return 0;
