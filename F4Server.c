@@ -9,6 +9,8 @@ int sem_mutex;
 int * matrix_pointer;
 int * shm_info_attach;
 int count_sigint = 0;
+char C1Symbol = ' ';
+char C2Symbol = ' ';
 
 void delete_all(){
     shmctl(shm_matrix_id, IPC_RMID, NULL);
@@ -21,6 +23,20 @@ void perror_exit_server(char * string){
     perror(string);
     delete_all();
     exit(-1);
+}
+
+void sigusr1_handler(int sig){
+    if (shm_info_attach[9] == C1Symbol){
+        printf("%c is out of the game!\n", C1Symbol);
+        printf("%c is the WINNER!", C2Symbol);
+        kill(shm_info_attach[5], SIGUSR2);
+    }else{
+        printf("%c is out of the game!\n", C2Symbol);
+        printf("%c is the WINNER!", C1Symbol);
+        kill(shm_info_attach[4], SIGUSR2);
+    }
+    delete_all();
+    exit(0);
 }
 
 void sigint_handler(int sig){
@@ -39,6 +55,8 @@ void sigint_handler(int sig){
         printf("Next CTRL+C will kill the game!\n");
     }
 }
+
+
 
 
 int main(int argc, char *argv[])
@@ -61,8 +79,8 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-    const char C1Symbol = argv[3][0];
-    const char C2Symbol = argv[4][0];
+    C1Symbol = argv[3][0];
+    C2Symbol = argv[4][0];
     
     /*int shm_matrix_id = shmget(IPC_PRIVATE, sizeof(int *) * N, IPC_CREAT | 0777);
     int ** matrix_pointer = (int **) shmat(shm_matrix_id, NULL, 0);
@@ -87,6 +105,11 @@ int main(int argc, char *argv[])
 
     if (signal(SIGINT, sigint_handler) == SIG_ERR){
         perror("Error Handling CTRL+C!\n");
+        exit(-1);
+    }
+
+    if (signal(SIGUSR1, sigusr1_handler) == SIG_ERR){
+        perror("Error Handling SIGUSR1!\n");
         exit(-1);
     }
     

@@ -1,5 +1,9 @@
 #include "F4.h"
 
+
+int * shm_info_attach;
+char symbol;
+
 void perror_exit_client(char * string){
     perror(string);
     exit(-1);
@@ -9,6 +13,24 @@ void sigusr1_handler(int sig){
     printf("End of the game by the server\n");
     exit(0);
 }
+
+void sigusr2_handler(int sig){
+    printf("Game won\n");
+    exit(0);
+}
+
+void sigint_handler(int sig){
+    if(shm_info_attach != NULL){
+        if (shm_info_attach[3]!=0){
+            shm_info_attach[9] = symbol;
+            kill(shm_info_attach[3], SIGUSR1);
+        }
+    }
+    printf("Game quitted...\n");
+    exit(0);
+}
+
+
 
 int main(int argc, char const *argv[])
 {
@@ -21,10 +43,18 @@ int main(int argc, char const *argv[])
     if (signal(SIGUSR1, sigusr1_handler) == SIG_ERR)
         perror_exit_client("Error Handling SIGUSR1\n");
 
+    if (signal(SIGUSR2, sigusr2_handler) == SIG_ERR)
+        perror_exit_client("Error Handling SIGUSR2\n");
+
+    if (signal(SIGINT, sigint_handler) == SIG_ERR)
+        perror_exit_client("Error Handling SIGINT\n");
+
+    
+
     int sem_mutex;
     int sem_sync;
     int shm_info;
-    int * shm_info_attach;
+    
     int * shm_matrix_attach;
     int shm_matrix_id;
 
@@ -60,7 +90,7 @@ int main(int argc, char const *argv[])
 
     /* Getting all the needed data from the shm. */
     int index = shm_info_attach[0]++; 
-    char symbol = shm_info_attach[index + 1];
+    symbol = shm_info_attach[index + 1];
     int server_pid = shm_info_attach[3];
     shm_info_attach[index + 4] = getpid();
     int shm_matrix = shm_info_attach[6];
