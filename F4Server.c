@@ -43,6 +43,7 @@ void sigint_handler(int sig){
     if (++count_sigint == 2){ //end of game
         printf("End of Game\n");
         if (shm_info_attach != NULL){
+            shm_info_attach[9] = 'C';
             if (shm_info_attach[4] != 0 && shm_info_attach[5]!=0){
                 kill(shm_info_attach[4], SIGUSR1);
                 kill(shm_info_attach[5], SIGUSR1);
@@ -64,8 +65,13 @@ int main(int argc, char *argv[])
     /* Cheking if the number of argument is correct. */
     if (argc != 5){
         printf("Errore nei parametri\n");
+        printf("La sintassi corretta è: ./F4Server numero_righe numero_colonne simbolo1 simbolo2 \n");
         return -1;
     }
+
+    int timer;
+    printf("Insert the number of seconds for each turn (0 for no timer): ");
+    scanf("%d", &timer);
     
     /* Getting the info from the command line and checking if are acceptable. */
     const int N = stringToInt(argv[1]);
@@ -155,7 +161,7 @@ int main(int argc, char *argv[])
     printf("Inizializzata la matrice...\n");
 
     /* Creating the shm that store various information. */
-    if ((shm_info = shmget(SHMINFO_KEY, sizeof(int) * 10, IPC_CREAT | 0777)) == -1){
+    if ((shm_info = shmget(SHMINFO_KEY, sizeof(int) * 11, IPC_CREAT | 0777)) == -1){
         /*perror("Info Shared Memory...");
         delete_all();
         exit(-1);*/
@@ -181,9 +187,11 @@ int main(int argc, char *argv[])
     shm_info_attach[7] = N;
     shm_info_attach[8] = M;
     shm_info_attach[9] = 'D';
+    shm_info_attach[10] = timer;
 
     printf("Inizializzata le info...\n");
 
+    /* Creating the sem sync semaphore. */
     if ((sem_sync = semget(SEMSYNC_KEY, 3, IPC_CREAT | IPC_EXCL | 0777))== -1){
         /*perror("Semaphore Sync...");
         delete_all();
@@ -191,9 +199,12 @@ int main(int argc, char *argv[])
         perror_exit_server("Semaphore Sync...");
     }
 
+    /* Union for setting al the semaphores previosly created. */
     union semun arg;
     short values[3] = {0, 0, 0};
     arg.array = values;
+
+    /* Setting all the semsync semaphores. */
     if ((semctl(sem_sync, 0, SETALL, arg)) == -1){
         /*perror("Assigning Sem Sync...");
         delete_all();
@@ -203,12 +214,9 @@ int main(int argc, char *argv[])
 
     printf("Settato il semsync...\n");
 
-    if ((sem_mutex = semget(SEMMUTEX_KEY, 1, IPC_CREAT | IPC_EXCL | 0777))== -1){
-        /*perror("Semaphore Mutex...");
-        delete_all();
-        exit(-1);*/
+    /* Setting the mutex semaphore. */
+    if ((sem_mutex = semget(SEMMUTEX_KEY, 1, IPC_CREAT | IPC_EXCL | 0777))== -1)
         perror_exit_server("Semaphore Mutex...");
-    }
 
     arg.val = 1;
     if ((semctl(sem_mutex, 0, SETVAL, arg)) == -1){
@@ -288,6 +296,16 @@ int main(int argc, char *argv[])
         
         turn ++;
     }
+    if (win == -1){
+        shm_info_attach[9] = 'P';
+    }else{
+        if (!(turn%2))shm_info_attach[9] = C1Symbol;
+        else shm_info_attach[9] = C2Symbol;
+        
+    }
+    kill(shm_info_attach[4], SIGUSR1);
+    kill(shm_info_attach[5], SIGUSR1);
+    
 
     delete_all();
     return 0;

@@ -3,6 +3,7 @@
 
 int * shm_info_attach;
 char symbol;
+int flag_turn_expired = 0;
 
 void perror_exit_client(char * string){
     perror(string);
@@ -10,12 +11,30 @@ void perror_exit_client(char * string){
 }
 
 void sigusr1_handler(int sig){
-    printf("End of the game by the server\n");
-    exit(0);
+    if (shm_info_attach != NULL){
+        if (shm_info_attach[9] == 'C'){
+            printf("End of the game by the server\n");
+            exit(0);
+        }
+
+        if (shm_info_attach[9] == 'P'){
+            printf("The Matrix is full! Draw!\n");
+            exit(0);
+        }
+
+        if (shm_info_attach[9] == symbol){
+            printf("I have won!\n");
+            exit(0);
+        }else{
+            printf("I have lost!\n");
+            exit(0);
+        }
+    }
+    
 }
 
 void sigusr2_handler(int sig){
-    printf("Game won\n");
+    printf("Game won!\n");
     exit(0);
 }
 
@@ -31,6 +50,12 @@ void sigint_handler(int sig){
 }
 
 
+void sigalrm_handler(int sig){
+    flag_turn_expired = 1;
+    printf("Your time is expired.\n");
+    kill(getpid(), SIGINT); /*temporary*/
+}
+
 
 int main(int argc, char const *argv[])
 {
@@ -42,12 +67,15 @@ int main(int argc, char const *argv[])
 
     if (signal(SIGUSR1, sigusr1_handler) == SIG_ERR)
         perror_exit_client("Error Handling SIGUSR1\n");
+    
+    if (signal(SIGALRM, sigalrm_handler) == SIG_ERR)
+        perror_exit_client("Error Handling SIGALRM\n");
 
     if (signal(SIGUSR2, sigusr2_handler) == SIG_ERR)
         perror_exit_client("Error Handling SIGUSR2\n");
 
-    if (signal(SIGINT, sigint_handler) == SIG_ERR)
-        perror_exit_client("Error Handling SIGINT\n");
+    if (signal(SIGINT, sigint_handler) == SIG_ERR || signal(SIGHUP, sigint_handler) == SIG_ERR)
+        perror_exit_client("Error Handling SIGINT SIGHUP\n");
 
     
 
@@ -81,7 +109,7 @@ int main(int argc, char const *argv[])
     printf("Sono in sezione critica...\n");
     /* start: cs */
 
-    if ((shm_info = shmget(SHMINFO_KEY, sizeof(int) * 10, 0)) == -1)
+    if ((shm_info = shmget(SHMINFO_KEY, sizeof(int) * 11, 0)) == -1)
         perror_exit_client("Info Shared Memory...");
 
     
@@ -96,6 +124,8 @@ int main(int argc, char const *argv[])
     int shm_matrix = shm_info_attach[6];
     int N = shm_info_attach[7];
     int M = shm_info_attach[8];
+    
+    int timer = shm_info_attach[10];
 
     /* end: cs */
 
@@ -147,8 +177,17 @@ int main(int argc, char const *argv[])
         printMatrix(shm_matrix_attach, N, M);
         
         do{
+            flag_turn_expired = 0;
             printf("Inserisci la colonna: ");
+            alarm(timer);
+            //read(1, &col, 1);
             scanf("%d", &col);
+            alarm(0);
+
+            if (flag_turn_expired){
+                printf("DEVO USCIRE\n");
+                break;
+            }
              
         }while(makeMove(shm_matrix_attach, N, M, col, symbol) == -1);
 
