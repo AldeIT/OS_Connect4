@@ -20,6 +20,9 @@ union semun {
     unsigned short * array;
 };
 
+/// @brief Convert a string into a integer
+/// @param string tThe string to convert
+/// @return The converted value
 int stringToInt(char * string){
     int index = 0;
     int value = 0;
@@ -34,17 +37,28 @@ int stringToInt(char * string){
     
 }
 
+/// @brief Delete all the ipcs
 void delete_all();
 
+/* Can we just put these funtions here and detele them from the other files??? */
 void perror_exit_server(char *);
 
 void perror_exit_client(char *);
 
-
+/// @brief Given a matrix dimension and a matrix position, it calculates the shifted position on an array
+/// @param N Number of rows
+/// @param M Number of colums
+/// @param x The row of the position 
+/// @param y The column of the position.
+/// @return The shifted position.
 int getCoordinates(int N, int M, int x, int y){
     return M*x + y;
 }
 
+/// @brief Given a matrix and its dimensions, prints it
+/// @param matrix The matrix
+/// @param N The number of rows 
+/// @param M The number of colums
 void printMatrix(int * matrix, int N, int M){
 
     for (int x = 0; x < M*4+1; x++){
@@ -70,6 +84,13 @@ void printMatrix(int * matrix, int N, int M){
     }
 }
 
+/// @brief Try to insert the given symbol into the given colums of the matrix
+/// @param matrix The matrix where to perform the insertion
+/// @param N The number of rows
+/// @param M The number of colums
+/// @param col The colums where to insert the symbol
+/// @param symbol The symbol to insert into the position
+/// @return 1 if the move was successful, -1 oterwhise
 int makeMove(int * matrix, int N, int M, int col, char symbol){
     if (col>=M){
         printf("Warning! Argument out of range\n");
@@ -92,11 +113,11 @@ int makeMove(int * matrix, int N, int M, int col, char symbol){
     return 1;
 }
 
-///@brief a funtcion to checks if there is a winner combination
-///@param matrix the matrix to analyse
-///@param n the number of rows
-///@param m the number of colums
-///@param symbol the symbol to look for
+///@brief Checks if there is a winner combination
+///@param matrix The matrix to analyse
+///@param n The number of rows
+///@param m The number of colums
+///@param symbol The symbol to look for
 ///@return 1 if winner, 0 otherwise
 int check_winner(int *matrix, int n, int m, char symbol){
 	int counter = 0;

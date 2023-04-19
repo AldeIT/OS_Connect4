@@ -1,6 +1,6 @@
 #include "F4.h"
 
-
+/* Global declarations. */
 int shm_matrix_id; 
 int shm_names;
 int shm_info;
@@ -19,12 +19,16 @@ void delete_all(){
     semctl(sem_mutex, 0, IPC_RMID, NULL);
 }
 
+/// @brief To handle the errors easier
+/// @param string The string to put in perror
 void perror_exit_server(char * string){
     perror(string);
     delete_all();
     exit(-1);
 }
 
+/// @brief Handler for the SIGUSR1
+/// @param sig The value of the signal
 void sigusr1_handler(int sig){
     if (shm_info_attach[9] == C1Symbol){
         printf("%c is out of the game!\n", C1Symbol);
@@ -39,6 +43,8 @@ void sigusr1_handler(int sig){
     exit(0);
 }
 
+/// @brief Handler for the SIGINTs
+/// @param sig The value of the signal
 void sigint_handler(int sig){
     if (++count_sigint == 2){ //end of game
         printf("End of Game\n");
@@ -69,11 +75,12 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    /* Getting the timer for the clients, 0 no timer. */
     int timer;
     printf("Insert the number of seconds for each turn (0 for no timer): ");
     scanf("%d", &timer);
     
-    /* Getting the info from the command line and checking if are acceptable. */
+    /* Getting the info from the command line and checking if they are acceptable. */
     const int N = stringToInt(argv[1]);
     if (N < 5){
         printf("Number or Rows not acceptable...\n");

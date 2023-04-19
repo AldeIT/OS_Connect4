@@ -1,15 +1,19 @@
 #include "F4.h"
 
-
+/* Global declarations. */
 int * shm_info_attach;
 char symbol;
 int flag_turn_expired = 0;
 
+/// @brief To handle the errors easier
+/// @param string The string to put in perror
 void perror_exit_client(char * string){
     perror(string);
     exit(-1);
 }
 
+/// @brief Handler for the SIGUSR1
+/// @param sig The value of the signal
 void sigusr1_handler(int sig){
     if (shm_info_attach != NULL){
         if (shm_info_attach[9] == 'C'){
@@ -33,11 +37,15 @@ void sigusr1_handler(int sig){
     
 }
 
+/// @brief Handler for SIGUSR2
+/// @param sig The value of the signal
 void sigusr2_handler(int sig){
     printf("Game won!\n");
     exit(0);
 }
 
+/// @brief Handler for SIGINT
+/// @param sig The value of the signal
 void sigint_handler(int sig){
     if(shm_info_attach != NULL){
         if (shm_info_attach[3]!=0){
@@ -49,7 +57,8 @@ void sigint_handler(int sig){
     exit(0);
 }
 
-
+/// @brief Handler for SIGALRM
+/// @param sig The value of the signal
 void sigalrm_handler(int sig){
     flag_turn_expired = 1;
     printf("Your time is expired.\n");
@@ -64,7 +73,7 @@ int main(int argc, char const *argv[])
         printf("Wrong argument error\n");
         return -1;
     }
-
+    
     if (signal(SIGUSR1, sigusr1_handler) == SIG_ERR)
         perror_exit_client("Error Handling SIGUSR1\n");
     
@@ -78,11 +87,10 @@ int main(int argc, char const *argv[])
         perror_exit_client("Error Handling SIGINT SIGHUP\n");
 
     
-
+    /* Declarations. */
     int sem_mutex;
     int sem_sync;
     int shm_info;
-    
     int * shm_matrix_attach;
     int shm_matrix_id;
 
@@ -109,10 +117,11 @@ int main(int argc, char const *argv[])
     printf("Sono in sezione critica...\n");
     /* start: cs */
 
+    /* Getting the shm that contains all the info. */
     if ((shm_info = shmget(SHMINFO_KEY, sizeof(int) * 11, 0)) == -1)
         perror_exit_client("Info Shared Memory...");
 
-    
+    /* Attaching to the above shm. */
     if ((shm_info_attach = (int *) shmat(shm_info, NULL, 0)) == NULL)
         perror_exit_client("Attaching info Shared Memory...");
 
@@ -152,7 +161,7 @@ int main(int argc, char const *argv[])
         perror("Matrix Shared Memory...");
         exit(-1);
     }*/
-    /* Attaching. */
+    /* Attaching to the shm matrix. */
     if ((shm_matrix_attach = (int *)shmat(shm_matrix, NULL, 0)) == NULL)
         perror_exit_client("Attaching info Shared Memory...");       
 
@@ -172,6 +181,7 @@ int main(int argc, char const *argv[])
     /*sleep(2);
     srand(time(NULL));*/
     int move;
+
     while(1){
         
         printMatrix(shm_matrix_attach, N, M);
