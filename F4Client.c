@@ -4,6 +4,7 @@
 int * shm_info_attach;
 char symbol;
 int flag_turn_expired = 0;
+int flag_isover = 0;
 
 /// @brief To handle the errors easier
 /// @param string The string to put in perror
@@ -23,15 +24,23 @@ void sigusr1_handler(int sig){
 
         if (shm_info_attach[9] == 'P'){
             printf("The Matrix is full! Draw!\n");
+            //exit(0);
+            flag_isover = 1;
+        }
+
+        if (shm_info_attach[9] == 'Q'){
+            printf("The other player doesn't want to play anymore...\n");
             exit(0);
         }
 
         if (shm_info_attach[9] == symbol){
             printf("I have won!\n");
-            exit(0);
+            //exit(0);
+            flag_isover = 1;
         }else{
             printf("I have lost!\n");
-            exit(0);
+            //exit(0);
+            flag_isover = 1;
         }
     }
     
@@ -69,10 +78,22 @@ void sigalrm_handler(int sig){
 int main(int argc, char const *argv[])
 {
     /*Cheking if the number of argument is correct.*/
-    if (argc != 2){
+        
+    if (argc>3){
         printf("Wrong argument error\n");
         return -1;
     }
+
+    /*if (argc == 3){
+        if (argv[2][0] == '*'){
+            printf("Wrong argument error\n");
+            return -1;
+        }else{
+
+        }
+    }*/
+
+
     
     if (signal(SIGUSR1, sigusr1_handler) == SIG_ERR)
         perror_exit_client("Error Handling SIGUSR1\n");
@@ -118,7 +139,7 @@ int main(int argc, char const *argv[])
     /* start: cs */
 
     /* Getting the shm that contains all the info. */
-    if ((shm_info = shmget(SHMINFO_KEY, sizeof(int) * 11, 0)) == -1)
+    if ((shm_info = shmget(SHMINFO_KEY, sizeof(int) * 12, 0)) == -1)
         perror_exit_client("Info Shared Memory...");
 
     /* Attaching to the above shm. */
@@ -127,6 +148,12 @@ int main(int argc, char const *argv[])
 
     /* Getting all the needed data from the shm. */
     int index = shm_info_attach[0]++; 
+
+    if (index>=2){
+        printf("Ci sono già due player...\n");
+        exit(-1);
+    }
+
     symbol = shm_info_attach[index + 1];
     int server_pid = shm_info_attach[3];
     shm_info_attach[index + 4] = getpid();
@@ -181,41 +208,78 @@ int main(int argc, char const *argv[])
     /*sleep(2);
     srand(time(NULL));*/
     int move;
-
+    char choice;
     while(1){
-        
-        printMatrix(shm_matrix_attach, N, M);
-        
-        do{
-            flag_turn_expired = 0;
-            printf("Inserisci la colonna: ");
-            alarm(timer);
-            //read(1, &col, 1);
-            scanf("%d", &col);
-            alarm(0);
+        flag_isover = 0;
+        while(1){
+            
+            printMatrix(shm_matrix_attach, N, M);
+            
+            do{
+                flag_turn_expired = 0;
+                printf("Inserisci la colonna: ");
+                alarm(timer);
+                //read(1, &col, 1);
+                scanf("%d", &col);
+                alarm(0);
 
-            if (flag_turn_expired){
-                printf("DEVO USCIRE\n");
+                if (flag_turn_expired){
+                    printf("DEVO USCIRE\n");
+                    break;
+                }
+                
+            }while(makeMove(shm_matrix_attach, N, M, col, symbol) == -1);
+
+
+            //sleep(3);
+            /*do{
+                sleep(2);
+                col = rand() % M;
+            }while(makeMove(shm_matrix_attach, N, M, col, symbol) == -1);*/
+            
+            printMatrix(shm_matrix_attach, N, M);
+
+            /* Unblocking the server. */
+            if((semop(sem_sync, &sops[0], 1)) == -1)
+                perror_exit_client("Error waking up the server...");
+
+            /* Blocking myself. */
+            if((semop(sem_sync, &sops[1], 1)) == -1){
+                if (errno != EINTR){
+                    perror_exit_client("Error blocking myself...");
+                }
+            }
+                
+
+            if (flag_isover){
+                printf("Game Over...\n");
                 break;
             }
-             
-        }while(makeMove(shm_matrix_attach, N, M, col, symbol) == -1);
+        }
 
-        //sleep(3);
-        /*do{
-            sleep(2);
-            col = rand() % M;
-        }while(makeMove(shm_matrix_attach, N, M, col, symbol) == -1);*/
+        do{
+            //write(1, "Wanna play again? y/n: ", strlen("Wanna play again? y/n: "));
+            printf("Wanna play again? y/n: ");
+            scanf(" %c", &choice);
+        }while(choice != 'y' && choice != 'Y' && choice != 'n' && choice != 'N');
+
+        if(choice == 'y' || choice == 'Y'){
+            shm_info_attach[11] += 1;
+        }
         
-        printMatrix(shm_matrix_attach, N, M);
-
         /* Unblocking the server. */
         if((semop(sem_sync, &sops[0], 1)) == -1)
             perror_exit_client("Error waking up the server...");
+            
+        if (choice == 'n' || choice == 'N'){
+            printf("Bye Bye...\n");
+            exit(0);
+        }
 
         /* Blocking myself. */
         if((semop(sem_sync, &sops[1], 1)) == -1)
             perror_exit_client("Error blocking myself...");
+
     }
 
     return 0;

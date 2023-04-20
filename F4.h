@@ -21,7 +21,7 @@ union semun {
 };
 
 /// @brief Convert a string into a integer
-/// @param string tThe string to convert
+/// @param string The string to convert
 /// @return The converted value
 int stringToInt(char * string){
     int index = 0;

@@ -70,8 +70,8 @@ int main(int argc, char *argv[])
 {
     /* Cheking if the number of argument is correct. */
     if (argc != 5){
-        printf("Errore nei parametri\n");
-        printf("La sintassi corretta è: ./F4Server numero_righe numero_colonne simbolo1 simbolo2 \n");
+        printf("Parameters Error.\n");
+        printf("The corretct sinxtax should be: ./F4Server n_rows n_colums symbol1 symbol2 \n");
         return -1;
     }
 
@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
     /* Getting the info from the command line and checking if they are acceptable. */
     const int N = stringToInt(argv[1]);
     if (N < 5){
-        printf("Number or Rows not acceptable...\n");
+        printf("Number of Rows not acceptable...\n");
         exit(-1);
     }
     const int M = stringToInt(argv[2]);
@@ -94,27 +94,6 @@ int main(int argc, char *argv[])
 
     C1Symbol = argv[3][0];
     C2Symbol = argv[4][0];
-    
-    /*int shm_matrix_id = shmget(IPC_PRIVATE, sizeof(int *) * N, IPC_CREAT | 0777);
-    int ** matrix_pointer = (int **) shmat(shm_matrix_id, NULL, 0);
-    int columns_ids[N];
-    for (int i = 0; i < N; i++){
-        columns_ids[i] = shmget(IPC_PRIVATE, sizeof(int *) * M, IPC_CREAT | 0777);
-        matrix_pointer[i] = (int *) shmat(columns_ids[i], NULL, 0);
-
-    }
-    for (int i = 0; i < N; i++){
-        for (int y = 0; y < M; y++){
-            matrix_pointer[i][y] = 0;
-        }
-    }
-
-    for (int i = 0; i < N; i++){
-        for (int y = 0; y < M; y++){
-            printf("%d ", matrix_pointer[i][y]);
-        }
-        printf("\n");
-    }*/
 
     if (signal(SIGINT, sigint_handler) == SIG_ERR){
         perror("Error Handling CTRL+C!\n");
@@ -160,15 +139,14 @@ int main(int argc, char *argv[])
     
     /* Initializing the matrix. */
     for (int i = 0; i < N; i++){
-        for (int y=0; y < M; y++){
+        for (int y=0; y < M; y++)
             matrix_pointer[getCoordinates(N, M, i, y)] = ' ';
-        }
     }
 
     printf("Inizializzata la matrice...\n");
 
     /* Creating the shm that store various information. */
-    if ((shm_info = shmget(SHMINFO_KEY, sizeof(int) * 11, IPC_CREAT | 0777)) == -1){
+    if ((shm_info = shmget(SHMINFO_KEY, sizeof(int) * 12, IPC_CREAT | 0777)) == -1){
         /*perror("Info Shared Memory...");
         delete_all();
         exit(-1);*/
@@ -195,6 +173,7 @@ int main(int argc, char *argv[])
     shm_info_attach[8] = M;
     shm_info_attach[9] = 'D';
     shm_info_attach[10] = timer;
+    shm_info_attach[11] = 0;
 
     printf("Inizializzata le info...\n");
 
@@ -244,23 +223,108 @@ int main(int argc, char *argv[])
     }
     
     printf("Mi sono sbloccato, dovrebbero essere arrivati i client: %d %d %d\n", getpid(), shm_info_attach[4], shm_info_attach[5]);
-    
-    /*makeMove(matrix_pointer, N, M, 0, 'O');
-    makeMove(matrix_pointer, N, M, 4, 'X');
-    makeMove(matrix_pointer, N, M, 2, 'O');
-
-    printMatrix(matrix_pointer, N, M);*/
-    
-    int turn = 0;
+    int turn;
     int win;
-    sops[0].sem_op = -1;
-
     while(1){
+        turn = 0;
+        sops[0].sem_op = -1;
+        shm_info_attach[11] = 0;
+        while(1){
+
+            printf("Vai Client %d\n", (turn%2) + 1);
+            if (semop(sem_sync, &sops[(turn % 2) + 1], 1) == -1){
+                /*perror("Error waking the current client...");
+                exit(-1);*/
+                perror_exit_server("Error waking the current client...");
+            }
+
+
+            if (semop(sem_sync, &sops[0], 1) == -1){
+                if (errno = EINTR){
+                    if (semop(sem_sync, &sops[0], 1) == -1){
+                        //perror("Reblocking myself...\n");
+                        break;
+                    }
+                }
+                else{
+                    /*perror("Error blocking myself...");
+                    exit(-1);*/
+                    perror_exit_server("Error blocking myself...");
+                }
+                
+            }
+
+            if (!(turn%2)){  // client 0
+                win = check_winner(matrix_pointer, N, M, C1Symbol);
+                if ( win == 1){
+                    printf("Partita terminata! Vince: %c\n", C1Symbol);
+                    break;
+                }else if(win == -1){
+                    printf("Matrice Piena\n");
+                    break;
+                }
+            }else {  //client 1
+                win = check_winner(matrix_pointer, N, M, C2Symbol);
+                if (win == 1){
+                    printf("Partita terminata! Vince: %c\n", C2Symbol);
+                    break;
+                }else if(win == -1){
+                    printf("Matrice Piena\n");
+                    break;
+                }
+            }
+            turn ++;
+        }
+
+        if (win == -1){
+            shm_info_attach[9] = 'P';
+        }
+        else{
+            if (!(turn%2))
+                shm_info_attach[9] = C1Symbol;
+            else 
+                shm_info_attach[9] = C2Symbol;
+            
+        }
+        kill(shm_info_attach[4], SIGUSR1);
+        kill(shm_info_attach[5], SIGUSR1);
+
+        printf("Waiting for clients...\n");
+
+        sops[0].sem_op = -2;
+
+        /* Blocking myself. */
+        if ((semop(sem_sync, &sops[0], 1)) == -1){
+            /*perror("Blocking server...");
+            delete_all();
+            exit(-1);*/
+            perror_exit_server("Blocking Server...");
+        }
+        
+        if(shm_info_attach[11] != 2){
+            shm_info_attach[9] = 'Q';
+            kill(shm_info_attach[4], SIGUSR1);
+            kill(shm_info_attach[5], SIGUSR1);
+            break;
+        }
+
+        /* Initializing the matrix. */
+        for (int i = 0; i < N; i++){
+            for (int y=0; y < M; y++)
+                matrix_pointer[getCoordinates(N, M, i, y)] = ' ';
+        }
+        
+    }
+
+    printf("Game Over!\n");
+    
+    
+
+    /*while(1){
 
         printf("Vai Client %d\n", (turn%2) + 1);
         if (semop(sem_sync, &sops[(turn % 2) + 1], 1) == -1){
-            /*perror("Error waking the current client...");
-            exit(-1);*/
+            
             perror_exit_server("Error waking the current client...");
         }
 
@@ -273,8 +337,6 @@ int main(int argc, char *argv[])
                 }
             }
             else{
-                /*perror("Error blocking myself...");
-                exit(-1);*/
                 perror_exit_server("Error blocking myself...");
             }
             
@@ -302,17 +364,11 @@ int main(int argc, char *argv[])
 
         
         turn ++;
-    }
-    if (win == -1){
-        shm_info_attach[9] = 'P';
-    }else{
-        if (!(turn%2))shm_info_attach[9] = C1Symbol;
-        else shm_info_attach[9] = C2Symbol;
-        
-    }
-    kill(shm_info_attach[4], SIGUSR1);
-    kill(shm_info_attach[5], SIGUSR1);
+    }*/
     
+    
+    
+
 
     delete_all();
     return 0;
