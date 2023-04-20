@@ -5,6 +5,8 @@ int * shm_info_attach;
 char symbol;
 int flag_turn_expired = 0;
 int flag_isover = 0;
+int * shm_matrix_attach;
+int N, M;
 
 /// @brief To handle the errors easier
 /// @param string The string to put in perror
@@ -23,6 +25,7 @@ void sigusr1_handler(int sig){
         }
 
         if (shm_info_attach[9] == 'P'){
+            
             printf("The Matrix is full! Draw!\n");
             //exit(0);
             flag_isover = 1;
@@ -38,6 +41,7 @@ void sigusr1_handler(int sig){
             //exit(0);
             flag_isover = 1;
         }else{
+            printMatrix(shm_matrix_attach, N, M);
             printf("I have lost!\n");
             //exit(0);
             flag_isover = 1;
@@ -112,7 +116,7 @@ int main(int argc, char const *argv[])
     int sem_mutex;
     int sem_sync;
     int shm_info;
-    int * shm_matrix_attach;
+    
     int shm_matrix_id;
 
     /* Semops for the mutex. */
@@ -158,8 +162,8 @@ int main(int argc, char const *argv[])
     int server_pid = shm_info_attach[3];
     shm_info_attach[index + 4] = getpid();
     int shm_matrix = shm_info_attach[6];
-    int N = shm_info_attach[7];
-    int M = shm_info_attach[8];
+    N = shm_info_attach[7];
+    M = shm_info_attach[8];
     
     int timer = shm_info_attach[10];
 

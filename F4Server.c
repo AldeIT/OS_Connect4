@@ -123,17 +123,11 @@ int main(int argc, char *argv[])
 
     /* Creating the shm that store the matrix. */
     if ((shm_matrix_id = shmget(IPC_PRIVATE, sizeof(int) * N * M, IPC_CREAT | 0777)) == -1){
-        /*perror("Matrix Shared Memory...");
-        delete_all();
-        exit(-1);*/
         perror_exit_server("Matrix Shared Memory...");
     }
 
     /* Attaching to the shm that store the matrix. */
     if ((matrix_pointer = (int *) shmat(shm_matrix_id, NULL, 0)) == NULL){
-        /*perror("Matrix Shared Memory Attach...");
-        delete_all();
-        exit(-1);*/
         perror_exit_server("Matrix Shared Memory Attach...");
     }
     
@@ -147,17 +141,11 @@ int main(int argc, char *argv[])
 
     /* Creating the shm that store various information. */
     if ((shm_info = shmget(SHMINFO_KEY, sizeof(int) * 12, IPC_CREAT | 0777)) == -1){
-        /*perror("Info Shared Memory...");
-        delete_all();
-        exit(-1);*/
         perror_exit_server("Info Shared Memory...");
     }
 
     /* Attaching to the previous shm. */
     if ((shm_info_attach = (int *) shmat(shm_info, NULL, 0)) == NULL){
-        /*perror("Info Shared Memory Attach...");
-        delete_all();
-        exit(-1);*/
         perror_exit_server("Info Shared Memory Attach...");
     }
 
@@ -179,9 +167,6 @@ int main(int argc, char *argv[])
 
     /* Creating the sem sync semaphore. */
     if ((sem_sync = semget(SEMSYNC_KEY, 3, IPC_CREAT | IPC_EXCL | 0777))== -1){
-        /*perror("Semaphore Sync...");
-        delete_all();
-        exit(-1);*/
         perror_exit_server("Semaphore Sync...");
     }
 
@@ -192,9 +177,6 @@ int main(int argc, char *argv[])
 
     /* Setting all the semsync semaphores. */
     if ((semctl(sem_sync, 0, SETALL, arg)) == -1){
-        /*perror("Assigning Sem Sync...");
-        delete_all();
-        exit(-1);*/
         perror_exit_server("Assigning Sem Sync...");
     }
 
@@ -206,9 +188,6 @@ int main(int argc, char *argv[])
 
     arg.val = 1;
     if ((semctl(sem_mutex, 0, SETVAL, arg)) == -1){
-        /*perror("Assigning Sem Mutex...");
-        delete_all();
-        exit(-1);*/
         perror_exit_server("Assigning Sem Mutex...");
     }
 
@@ -216,9 +195,6 @@ int main(int argc, char *argv[])
     printf("Mi blocco...\n");
 
     if ((semop(sem_sync, &sops[0], 1)) == -1){
-        /*perror("Blocking server...");
-        delete_all();
-        exit(-1);*/
         perror_exit_server("Blocking Server...");
     }
     
@@ -233,22 +209,18 @@ int main(int argc, char *argv[])
 
             printf("Vai Client %d\n", (turn%2) + 1);
             if (semop(sem_sync, &sops[(turn % 2) + 1], 1) == -1){
-                /*perror("Error waking the current client...");
-                exit(-1);*/
                 perror_exit_server("Error waking the current client...");
             }
 
 
             if (semop(sem_sync, &sops[0], 1) == -1){
-                if (errno = EINTR){
+                if (errno == EINTR){
                     if (semop(sem_sync, &sops[0], 1) == -1){
                         //perror("Reblocking myself...\n");
                         break;
                     }
                 }
                 else{
-                    /*perror("Error blocking myself...");
-                    exit(-1);*/
                     perror_exit_server("Error blocking myself...");
                 }
                 
@@ -295,10 +267,17 @@ int main(int argc, char *argv[])
 
         /* Blocking myself. */
         if ((semop(sem_sync, &sops[0], 1)) == -1){
-            /*perror("Blocking server...");
-            delete_all();
-            exit(-1);*/
-            perror_exit_server("Blocking Server...");
+
+            if (errno == EINTR){
+
+                if (semop(sem_sync, &sops[0], 1) == -1){
+                    perror_exit_server("Blocking Server...\n");
+                }
+
+            }else{
+                perror_exit_server("Blocking Server...");
+            }
+            
         }
         
         if(shm_info_attach[11] != 2){
@@ -319,56 +298,6 @@ int main(int argc, char *argv[])
     printf("Game Over!\n");
     
     
-
-    /*while(1){
-
-        printf("Vai Client %d\n", (turn%2) + 1);
-        if (semop(sem_sync, &sops[(turn % 2) + 1], 1) == -1){
-            
-            perror_exit_server("Error waking the current client...");
-        }
-
-
-        if (semop(sem_sync, &sops[0], 1) == -1){
-            if (errno = EINTR){
-                if (semop(sem_sync, &sops[0], 1) == -1){
-                    //perror("Reblocking myself...\n");
-                    break;
-                }
-            }
-            else{
-                perror_exit_server("Error blocking myself...");
-            }
-            
-        }
-
-        if (!(turn%2)){  // client 0
-            win = check_winner(matrix_pointer, N, M, C1Symbol);
-            if ( win == 1){
-                printf("Partita terminata! Vince: %c\n", C1Symbol);
-                break;
-            }else if(win == -1){
-                printf("Matrice Piena\n");
-                break;
-            }
-        }else {  //client 1
-            win = check_winner(matrix_pointer, N, M, C2Symbol);
-            if (win == 1){
-                printf("Partita terminata! Vince: %c\n", C2Symbol);
-                break;
-            }else if(win == -1){
-                printf("Matrice Piena\n");
-                break;
-            }
-        }
-
-        
-        turn ++;
-    }*/
-    
-    
-    
-
 
     delete_all();
     return 0;

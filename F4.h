@@ -92,7 +92,10 @@ void printMatrix(int * matrix, int N, int M){
 /// @param symbol The symbol to insert into the position
 /// @return 1 if the move was successful, -1 oterwhise
 int makeMove(int * matrix, int N, int M, int col, char symbol){
-    if (col>=M){
+    
+    col--;
+    
+    if (col>=M || col < 0){
         printf("Warning! Argument out of range\n");
         return -1;
     }
