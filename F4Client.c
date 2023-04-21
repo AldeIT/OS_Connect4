@@ -155,7 +155,7 @@ int main(int argc, char const *argv[])
     int index = shm_info_attach[0]++; 
 
     if (index>=2){
-        printf("Ci sono già due player...\n");
+        printf("There are already 2 players...\n");
         exit(-1);
     }
 
@@ -185,6 +185,7 @@ int main(int argc, char const *argv[])
     sops[1].sem_op = -1;
     sops[1].sem_flg = 0;
 
+    /* Temporary, for debugging purposes.*/
     printf("Mio indice: %d, Simbolo: %c, Server: %d\n", index, symbol, server_pid);
     printf("Sblocco il server...\n");
 
@@ -193,6 +194,7 @@ int main(int argc, char const *argv[])
         perror("Matrix Shared Memory...");
         exit(-1);
     }*/
+
     /* Attaching to the shm matrix. */
     if ((shm_matrix_attach = (int *)shmat(shm_matrix, NULL, 0)) == NULL)
         perror_exit_client("Attaching info Shared Memory...");       
@@ -220,11 +222,11 @@ int main(int argc, char const *argv[])
             
             printMatrix(shm_matrix_attach, N, M);
             
+            /* Getting the move from the player. */
             do{
                 flag_turn_expired = 0;
                 printf("Inserisci la colonna: ");
                 alarm(timer);
-                //read(1, &col, 1);
                 scanf("%d", &col);
                 alarm(0);
 
@@ -234,7 +236,6 @@ int main(int argc, char const *argv[])
                 }
                 
             }while(makeMove(shm_matrix_attach, N, M, col, symbol) == -1);
-
 
             //sleep(3);
             /*do{
@@ -253,8 +254,7 @@ int main(int argc, char const *argv[])
                 if (errno != EINTR){
                     perror_exit_client("Error blocking myself...");
                 }
-            }
-                
+            }  
 
             if (flag_isover){
                 printf("Game Over...\n");
@@ -262,8 +262,8 @@ int main(int argc, char const *argv[])
             }
         }
 
+        /* Asking players if they wanna play again. */
         do{
-            //write(1, "Wanna play again? y/n: ", strlen("Wanna play again? y/n: "));
             printf("Wanna play again? y/n: ");
             scanf(" %c", &choice);
         }while(choice != 'y' && choice != 'Y' && choice != 'n' && choice != 'N');
@@ -275,7 +275,8 @@ int main(int argc, char const *argv[])
         /* Unblocking the server. */
         if((semop(sem_sync, &sops[0], 1)) == -1)
             perror_exit_client("Error waking up the server...");
-            
+
+        /* If one player doesn't want to play anymore. */
         if (choice == 'n' || choice == 'N'){
             printf("Bye Bye...\n");
             exit(0);

@@ -11,6 +11,7 @@ int * shm_info_attach;
 int count_sigint = 0;
 char C1Symbol = MATRIX_DEFAULT_CHAR;
 char C2Symbol = MATRIX_DEFAULT_CHAR;
+//char symbol[2] = {MATRIX_DEFAULT_CHAR, MATRIX_DEFAULT_CHAR};
 
 void delete_all(){
     shmctl(shm_matrix_id, IPC_RMID, NULL);
@@ -30,14 +31,14 @@ void perror_exit_server(char * string){
 /// @brief Handler for the SIGUSR1
 /// @param sig The value of the signal
 void sigusr1_handler(int sig){
-    if (shm_info_attach[9] == C1Symbol){
-        printf("%c is out of the game!\n", C1Symbol);
-        printf("%c is the WINNER!", C2Symbol);
+    if (shm_info_attach[9] == C1Symbol){  //symbol[0]
+        printf("%c is out of the game!\n", C1Symbol);  //symbol[0]
+        printf("%c is the WINNER!", C2Symbol);  //symbol[0]
         kill(shm_info_attach[5], SIGUSR2);
     }else{
-        printf("%c is out of the game!\n", C2Symbol);
-        printf("%c is the WINNER!", C1Symbol);
-        kill(shm_info_attach[4], SIGUSR2);
+        printf("%c is out of the game!\n", C2Symbol);  //symbol[1]
+        printf("%c is the WINNER!", C1Symbol);  //symbol[1]
+        kill(shm_info_attach[4], SIGUSR2);  //symbol[1]
     }
     delete_all();
     exit(0);
@@ -95,6 +96,8 @@ int main(int argc, char *argv[])
 
     C1Symbol = argv[3][0];
     C2Symbol = argv[4][0];
+    //symbol[0] = argv[3][0];
+    //symbol[1] = argv[4][0];
 
     if (signal(SIGINT, sigint_handler) == SIG_ERR){
         perror("Error Handling CTRL+C!\n");
@@ -150,7 +153,9 @@ int main(int argc, char *argv[])
     /* Putting info into the shm. */
     shm_info_attach[0] = 0;
     shm_info_attach[1] = C1Symbol;
+    //shm_info_attach[1] = symbol[0];
     shm_info_attach[2] = C2Symbol;
+    //shm_info_attach[2] = symbol[1];
     shm_info_attach[3] = getpid();
     shm_info_attach[4] = 0;
     shm_info_attach[5] = 0;
@@ -207,24 +212,21 @@ int main(int argc, char *argv[])
         while(1){
 
             printf("Vai Client %d\n", (turn%2) + 1);
-            if (semop(sem_sync, &sops[(turn % 2) + 1], 1) == -1){
+            /* Ublocking the client corresponding to the current turn. */
+            if (semop(sem_sync, &sops[(turn % 2) + 1], 1) == -1)
                 perror_exit_server("Error waking the current client...");
-            }
 
-
+            /* Blocking myself and handling if a signal make the semop fails. */
             if (semop(sem_sync, &sops[0], 1) == -1){
                 if (errno == EINTR){
-                    if (semop(sem_sync, &sops[0], 1) == -1){
-                        //perror("Reblocking myself...\n");
+                    if (semop(sem_sync, &sops[0], 1) == -1)
                         break;
-                    }
                 }
-                else{
+                else
                     perror_exit_server("Error blocking myself...");
-                }
-                
             }
 
+            /* gonna remove this and replacing it with the one commented below. */
             if (!(turn%2)){  // client 0
                 win = check_winner(matrix_pointer, N, M, C1Symbol);
                 if ( win == 1){
@@ -244,17 +246,27 @@ int main(int argc, char *argv[])
                     break;
                 }
             }
+            /*
+            win = check_winner(matrix_pointer, N, M, symbol[turn%2]);
+            if ( win == 1){
+                printf("Game over! The winner is: %c\n", symbol[turn%2]);
+                break;
+            }else if(win == -1){
+                printf("The matrix is full!\n");
+                break;
+            }
+            */
             turn ++;
         }
 
-        if (win == -1){
+        if (win == -1)
             shm_info_attach[9] = MATRIX_IS_FULL;
-        }
         else{
             if (!(turn%2))
                 shm_info_attach[9] = C1Symbol;
             else 
                 shm_info_attach[9] = C2Symbol;
+            //shm_info_attach[9] = symbol[turn%2];
             
         }
         kill(shm_info_attach[4], SIGUSR1);

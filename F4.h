@@ -71,6 +71,11 @@ int getCoordinates(int N, int M, int x, int y){
     return M*x + y;
 }
 
+
+/// @brief Initializes the matrix
+/// @param matrix The matrix to initialize
+/// @param N The number of rows
+/// @param M The number of colums
 void matrix_init(int * matrix, int N, int M){
     for (int i = 0; i < N; i++){
         for (int y = 0; y < M; y++){
@@ -147,7 +152,8 @@ int makeMove(int * matrix, int N, int M, int col, char symbol){
 ///@param symbol The symbol to look for
 ///@return 1 if winner, 0 otherwise
 int check_winner(int *matrix, int n, int m, char symbol){
-	int counter = 0;
+	/* Checking if the matrix is full. */
+    int counter = 0;
     for(int i=0; i<n; i++){
         for(int y=0; y<m; y++){
             if(matrix[getCoordinates(n,m,i,y)]!=MATRIX_DEFAULT_CHAR)
@@ -156,10 +162,8 @@ int check_winner(int *matrix, int n, int m, char symbol){
                 break;
         }
     }
-    if(counter == m*n){
-        //printf("Matrix full\n");
+    if(counter == m*n)
         return -1;
-    }
 
 	/* checking the horizontal lines */
     for (int y = 0; y<m-3 ; y++ ){  //-3 because checking the 3 elements after the current
