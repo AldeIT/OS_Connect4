@@ -9,8 +9,8 @@ int sem_mutex;
 int * matrix_pointer;
 int * shm_info_attach;
 int count_sigint = 0;
-char C1Symbol = ' ';
-char C2Symbol = ' ';
+char C1Symbol = MATRIX_DEFAULT_CHAR;
+char C2Symbol = MATRIX_DEFAULT_CHAR;
 
 void delete_all(){
     shmctl(shm_matrix_id, IPC_RMID, NULL);
@@ -49,7 +49,7 @@ void sigint_handler(int sig){
     if (++count_sigint == 2){ //end of game
         printf("End of Game\n");
         if (shm_info_attach != NULL){
-            shm_info_attach[9] = 'C';
+            shm_info_attach[9] = SECOND_SIGINT;
             if (shm_info_attach[4] != 0 && shm_info_attach[5]!=0){
                 kill(shm_info_attach[4], SIGUSR1);
                 kill(shm_info_attach[5], SIGUSR1);
@@ -74,6 +74,7 @@ int main(int argc, char *argv[])
         printf("The corretct sinxtax should be: ./F4Server n_rows n_colums symbol1 symbol2 \n");
         return -1;
     }
+    print_banner();
 
     /* Getting the timer for the clients, 0 no timer. */
     int timer;
@@ -132,10 +133,7 @@ int main(int argc, char *argv[])
     }
     
     /* Initializing the matrix. */
-    for (int i = 0; i < N; i++){
-        for (int y=0; y < M; y++)
-            matrix_pointer[getCoordinates(N, M, i, y)] = ' ';
-    }
+    matrix_init(matrix_pointer, N, M);
 
     printf("Inizializzata la matrice...\n");
 
@@ -159,7 +157,7 @@ int main(int argc, char *argv[])
     shm_info_attach[6] = shm_matrix_id;
     shm_info_attach[7] = N;
     shm_info_attach[8] = M;
-    shm_info_attach[9] = 'D';
+    shm_info_attach[9] = RIS_DEFAULT_VALUE;
     shm_info_attach[10] = timer;
     shm_info_attach[11] = 0;
 
@@ -201,6 +199,7 @@ int main(int argc, char *argv[])
     printf("Mi sono sbloccato, dovrebbero essere arrivati i client: %d %d %d\n", getpid(), shm_info_attach[4], shm_info_attach[5]);
     int turn;
     int win;
+    
     while(1){
         turn = 0;
         sops[0].sem_op = -1;
@@ -249,7 +248,7 @@ int main(int argc, char *argv[])
         }
 
         if (win == -1){
-            shm_info_attach[9] = 'P';
+            shm_info_attach[9] = MATRIX_IS_FULL;
         }
         else{
             if (!(turn%2))
@@ -281,17 +280,14 @@ int main(int argc, char *argv[])
         }
         
         if(shm_info_attach[11] != 2){
-            shm_info_attach[9] = 'Q';
+            shm_info_attach[9] = CLIENT_QUIT;
             kill(shm_info_attach[4], SIGUSR1);
             kill(shm_info_attach[5], SIGUSR1);
             break;
         }
 
         /* Initializing the matrix. */
-        for (int i = 0; i < N; i++){
-            for (int y=0; y < M; y++)
-                matrix_pointer[getCoordinates(N, M, i, y)] = ' ';
-        }
+        matrix_init(matrix_pointer, N, M);
         
     }
 

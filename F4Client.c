@@ -19,19 +19,20 @@ void perror_exit_client(char * string){
 /// @param sig The value of the signal
 void sigusr1_handler(int sig){
     if (shm_info_attach != NULL){
-        if (shm_info_attach[9] == 'C'){
+        if (shm_info_attach[9] == SECOND_SIGINT){
             printf("End of the game by the server\n");
             exit(0);
         }
 
-        if (shm_info_attach[9] == 'P'){
+        if (shm_info_attach[9] == MATRIX_IS_FULL){
             
             printf("The Matrix is full! Draw!\n");
             //exit(0);
             flag_isover = 1;
+            return;
         }
 
-        if (shm_info_attach[9] == 'Q'){
+        if (shm_info_attach[9] == CLIENT_QUIT){
             printf("The other player doesn't want to play anymore...\n");
             exit(0);
         }
