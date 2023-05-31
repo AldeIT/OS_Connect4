@@ -240,7 +240,11 @@ int main(int argc, char const *argv[])
                     flag_turn_expired = 0;
                     printf("Insert the column number: ");
                     alarm(timer);  /* Giving myself timer seconds to make the move (0 is ignored). */
-                    scanf("%d", &col);
+                    if(!scanf(" %d", &col)){
+                        int c;
+                        while ((c = getchar()) != '\n' && c != EOF) {}
+                        col = -1;
+                    }
                     alarm(0);
                 }
 

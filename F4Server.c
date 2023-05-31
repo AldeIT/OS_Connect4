@@ -90,9 +90,7 @@ int main(int argc, char *argv[])
     print_banner();
 
     /* Getting the timer for the clients, 0 no timer. */
-    int timer;
-    printf("Insert the number of seconds for each turn (0 for no timer): ");
-    scanf("%d", &timer);
+    
     
     /* Getting the info from the command line and checking if they are acceptable. */
     const int N = string_to_int(argv[1]);
@@ -159,6 +157,10 @@ int main(int argc, char *argv[])
     if ((shm_info_attach = (int *) shmat(shm_info, NULL, 0)) == NULL){
         perror_exit_server("Info Shared Memory Attach...");
     }
+
+    int timer;
+    printf("Insert the number of seconds for each turn (0 for no timer): ");
+    scanf("%d", &timer);
 
     /* Putting info into the shm. */
     shm_info_init(shm_info_attach, N, M, timer);
