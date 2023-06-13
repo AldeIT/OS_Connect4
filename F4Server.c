@@ -67,6 +67,12 @@ void sigint_handler(int sig){
     }
 }
 
+void sighup_handler(int sig){
+    count_sigint = MAX_SIGINT - 1;
+    kill(getpid(), SIGINT);
+    exit(-1);
+}
+
 /// @brief Initializes the info matrix
 /// @param shm_info_attach the pointer to the matrix
 /// @param N the number of rows
@@ -146,6 +152,9 @@ int main(int argc, char *argv[])
     /* Forza4 Logo. */
     print_banner();
 
+    printf("xasdassadasdas\n");
+    printf("%d\n", getpid());
+
     /* Setting the exit function to delete all the ipcs */
     if (atexit(delete_all) == -1){
         perror("Error setting delete_all up...");
@@ -155,6 +164,11 @@ int main(int argc, char *argv[])
     /* Handling all the signals. */
     if (signal(SIGINT, sigint_handler) == SIG_ERR){
         perror("Error Handling CTRL+C!\n");
+        exit(-1);
+    }
+
+    if (signal(SIGHUP, sighup_handler) == SIG_ERR){
+        perror("Error Handling SIGHUP signal!\n");
         exit(-1);
     }
 
