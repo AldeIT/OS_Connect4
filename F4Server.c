@@ -171,7 +171,7 @@ int main(int argc, char *argv[])
         printf("Insert the number of seconds for each turn (0 for no timer): ");
 
 
-        if(!scanf(" %d", &timer)){
+        if(!scanf(" %d", &timer)){ /*If the user inserts a string*/
             int c;
             while ((c = getchar()) != '\n' && c != EOF) {}
             checkValidTimer = 0;
@@ -189,15 +189,15 @@ int main(int argc, char *argv[])
     
     /* Sops for the sync semaphores. */
     struct sembuf sops[3];
-    /* For locking myself. */
+    /* Used for locking operations on myself. */
     sops[0].sem_num = 2;
     sops[0].sem_op  = -2; /* Subtract 1 from server semaphore. */
     sops[0].sem_flg = 0;
-    /* For unlocking the first client. */
+    /* Used for unlocking operations on the first client. */
     sops[1].sem_num = 0;
     sops[1].sem_op  = +1; /* Add 1 from client1 semaphore. */
     sops[1].sem_flg = 0;
-    /* For unlocking the second client. */
+    /* Used for unlocking operations on the second client. */
     sops[2].sem_num = 1;
     sops[2].sem_op  = +1; /* Add 1 from client2 semaphore. */
     sops[2].sem_flg = 0;

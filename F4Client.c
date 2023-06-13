@@ -231,7 +231,6 @@ int main(int argc, char const *argv[])
     if((semop(sem_sync, &sops[0], 1)) == -1)
         perror_exit_client("Error waking up the server...");
     
-    //printf("qui %d\n", index);
     
 
     /* Locking myself. */
