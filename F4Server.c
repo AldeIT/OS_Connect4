@@ -231,6 +231,10 @@ int main(int argc, char *argv[])
         perror_exit_server("Info Shared Memory Attach...");
     }
 
+    int timer;
+    printf("Insert the number of seconds for each turn (0 for no timer): ");
+    scanf("%d", &timer);
+
     /* Putting info into the shm. */
     shm_info_init(shm_info_attach, N, M, timer);
 
