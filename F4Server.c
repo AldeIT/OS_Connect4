@@ -152,9 +152,6 @@ int main(int argc, char *argv[])
     /* Forza4 Logo. */
     print_banner();
 
-    printf("xasdassadasdas\n");
-    printf("%d\n", getpid());
-
     /* Setting the exit function to delete all the ipcs */
     if (atexit(delete_all) == -1){
         perror("Error setting delete_all up...");
