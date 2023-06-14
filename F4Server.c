@@ -33,12 +33,12 @@ void sigusr1_handler(int sig){
     if (shm_info_attach[0]==2){
         if (shm_info_attach[9] == symbol[0]){  
             printf("%c is out of the game!\n", symbol[0]);  
-            printf("%c is the WINNER!", symbol[1]);  
+            printf("%c is the WINNER!\n", symbol[1]);  
             kill(shm_info_attach[5], SIGUSR2);
         }
         else{
             printf("%c is out of the game!\n", symbol[1]);  
-            printf("%c is the WINNER!", symbol[0]); 
+            printf("%c is the WINNER!\n", symbol[0]); 
             kill(shm_info_attach[4], SIGUSR2); 
         }
     }
