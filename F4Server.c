@@ -67,6 +67,9 @@ void sigint_handler(int sig){
     }
 }
 
+
+/// @brief Handler for the SIGHUP
+/// @param sig The value of the signal
 void sighup_handler(int sig){
     count_sigint = MAX_SIGINT - 1;
     kill(getpid(), SIGINT);
