@@ -234,8 +234,14 @@ int main(int argc, char const *argv[])
     
 
     /* Locking myself. */
-    if((semop(sem_sync, &sops[1], 1)) == -1)
+    if((semop(sem_sync, &sops[1], 1)) == -1){
+        if (errno == EIDRM){
+            printf("The server closed the game...\n");
+            exit(0);
+        }
         perror_exit_client("Error blocking myself...");
+    }
+        
 
     /* Declarations. */
     int col;

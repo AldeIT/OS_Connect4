@@ -297,7 +297,7 @@ int main(int argc, char *argv[])
         sops[0].sem_op = -1;
         shm_info_attach[11] = 0;
         while(1){
-            /* Ulocking the client corresponding to the current turn. */
+            /* Unlocking the client corresponding to the current turn. */
             if (semop(sem_sync, &sops[(turn % 2) + 1], 1) == -1)
                 perror_exit_server("Error waking the current client...");
 
