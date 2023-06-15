@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
     /* Cheking if the number of argument is correct. */
     if (argc != 5){
         printf("Parameters Error.\n");
-        printf("The corretct sinxtax should be: ./F4Server n_rows n_colums symbol1 symbol2 \n");
+        printf("The correct sintax should be: ./F4Server n_rows n_colums symbol1 symbol2 \n");
         return -1;
     }
 
