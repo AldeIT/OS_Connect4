@@ -13,8 +13,6 @@ char symbol[2] = {MATRIX_DEFAULT_CHAR, MATRIX_DEFAULT_CHAR};
 
 
 void delete_all(){
-    shmdt(matrix_pointer);
-    shmdt(shm_info_attach);
     shmctl(shm_matrix_id, IPC_RMID, NULL);
     shmctl(shm_info, IPC_RMID, NULL);
     semctl(sem_sync, 0, IPC_RMID, NULL);

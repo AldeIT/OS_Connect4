@@ -106,8 +106,11 @@ int main(int argc, char const *argv[])
     if (argc == 3){
         if (strlen(argv[2])==1 && argv[2][0] == '*')
             create_son = 1;
-        else
-            perror_exit_client("Wrong argument");
+        else{
+            printf("Can't recognize optional argument...\n");
+            exit(-1);
+        }
+            
     }
 
     /* Creating the son. */
