@@ -19,6 +19,7 @@ void perror_exit_client(char * string){
     exit(-1);
 }
 
+
 /// @brief Handler for the SIGUSR1
 /// @param sig The value of the signal
 void sigusr1_handler(int sig){
