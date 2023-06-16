@@ -84,6 +84,11 @@ int make_move(int * matrix, int N, int M, int col, char symbol);
 ///@return 1 if winner, 0 otherwise
 int check_winner(int *matrix, int n, int m, char symbol);
 
+/// @brief Checks if a string is Numeric
+/// @param string the string to check
+/// @return 1 if numeric, 0 otherwise
+int isNumeric(char* string);
+
 /************************************
 *VR471346, VR471414, VR471404
 *Aldegheri Alessandro, Venturi Davide, Zerman Nicolò

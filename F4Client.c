@@ -141,6 +141,7 @@ int main(int argc, char const *argv[])
     int sem_mutex;
     int sem_sync;
     int shm_info;
+    char colInsert[10];
 
     /* Semops for the mutex. */
     struct sembuf sops_mutex[3];
@@ -273,12 +274,19 @@ int main(int argc, char const *argv[])
                     flag_turn_expired = 0;
                     printf("Insert the column number: ");
                     alarm(timer);  /* Giving myself timer seconds to make the move (0 is ignored). */
-                    if(!scanf(" %d", &col)){
+                    
+                    scanf("%s", colInsert);
+                    if (!isNumeric(colInsert)){
+                        col = -1;
+                        //printf("Wrong input, please try again.\n");
+                    }else col = atoi(colInsert);
+                    
+                    /*if(!scanf(" %d", &col)){
                         int c;
                         while ((c = getchar()) != '\n' && c != EOF) {}
                         col = -1;
                         printf("The number of the column should be a number...\n");
-                    }
+                    }*/
                     alarm(0);
                 }
 

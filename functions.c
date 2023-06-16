@@ -67,7 +67,7 @@ int make_move(int * matrix, int N, int M, int col, char symbol){
     col--;
     
     if (col>=M || col < 0){
-        printf("Warning! Argument out of range\n");
+        printf("Warning! Value not acceptable\n");
         return -1;
     }
     int i = 0;
@@ -134,6 +134,15 @@ int check_winner(int *matrix, int n, int m, char symbol){
         }
     }
 	return 0;
+}
+
+int isNumeric(char* string){
+    int count = 0;
+    while (string[count]!='\0'){
+        if (string[count] <'0' || string[count] > '9')return 0;
+        count++;
+    }
+    return 1;
 }
 
 /************************************

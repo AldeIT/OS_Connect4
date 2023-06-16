@@ -96,17 +96,7 @@ void shm_info_init(int * shm_info_attach, int N, int M, int timer){
     shm_info_attach[11] = 0;
 }
 
-/// @brief Checks if a string is Numeric
-/// @param string the string to check
-/// @return 1 if numeric, 0 otherwise
-int isNumeric(char* string){
-    int count = 0;
-    while (string[count]!='\0'){
-        if (string[count] <'0' || string[count] > '9')return 0;
-        count++;
-    }
-    return 1;
-}
+
 
 
 
