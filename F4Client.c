@@ -191,6 +191,7 @@ int main(int argc, char const *argv[])
 
     if (index>=2){
         printf("There are already 2 players...\n");
+        shm_info_attach[0] = 2;
         /* Releasing mutex. */
         if((semop(sem_mutex, &sops_mutex[1], 1)) == -1)
             perror_exit_client("Error Mutex Exit...");
@@ -278,16 +279,9 @@ int main(int argc, char const *argv[])
                     scanf("%s", colInsert);
                     if (!isNumeric(colInsert)){
                         col = -1;
-                        //printf("Wrong input, please try again.\n");
                     }else col = atoi(colInsert);
                     
-                    /*if(!scanf(" %d", &col)){
-                        int c;
-                        while ((c = getchar()) != '\n' && c != EOF) {}
-                        col = -1;
-                        printf("The number of the column should be a number...\n");
-                    }*/
-                    alarm(0);
+                    alarm(0); /* Deactivating the timer */
                 }
 
                 if (flag_turn_expired){

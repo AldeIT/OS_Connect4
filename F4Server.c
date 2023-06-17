@@ -6,6 +6,7 @@ int shm_names;
 int shm_info;
 int sem_sync;
 int sem_mutex;
+int another_server = 0;
 int * matrix_pointer;
 int * shm_info_attach;
 int count_sigint = 0;
@@ -13,10 +14,13 @@ char symbol[2] = {MATRIX_DEFAULT_CHAR, MATRIX_DEFAULT_CHAR};
 
 
 void delete_all(){
-    shmctl(shm_matrix_id, IPC_RMID, NULL);
-    shmctl(shm_info, IPC_RMID, NULL);
-    semctl(sem_sync, 0, IPC_RMID, NULL);
-    semctl(sem_mutex, 0, IPC_RMID, NULL);
+    if (!another_server){
+        shmctl(shm_matrix_id, IPC_RMID, NULL);
+        shmctl(shm_info, IPC_RMID, NULL);
+        semctl(sem_sync, 0, IPC_RMID, NULL);
+        semctl(sem_mutex, 0, IPC_RMID, NULL);
+    }
+    
 }
 
 /// @brief To handle the errors easier
@@ -206,6 +210,20 @@ int main(int argc, char *argv[])
     sops[2].sem_op  = +1; /* Add 1 from client2 semaphore. */
     sops[2].sem_flg = 0;
 
+    int shm_info_key = ftok("key.txt", SHMINFO_KEY);
+
+    /* Creating the shm that store various information. */
+    if ((shm_info = shmget(shm_info_key, sizeof(int) * 12, IPC_CREAT | 0777 | IPC_EXCL)) == -1){
+
+        if (errno == EEXIST){
+            printf("Another server already exists!\n");
+            another_server = 1;
+            exit(-1);
+        }
+
+        perror_exit_server("Creating the Info Shared Memory...");
+    }
+
     /* Creating the shm that store the matrix. */
     if ((shm_matrix_id = shmget(IPC_PRIVATE, sizeof(int) * N * M, IPC_CREAT | 0777 | IPC_EXCL)) == -1){
         perror_exit_server("Matrix Shared Memory...");
@@ -216,12 +234,7 @@ int main(int argc, char *argv[])
         perror_exit_server("Matrix Shared Memory Attach...");
     }
 
-    int shm_info_key = ftok("key.txt", SHMINFO_KEY);
-
-    /* Creating the shm that store various information. */
-    if ((shm_info = shmget(shm_info_key, sizeof(int) * 12, IPC_CREAT | 0777 | IPC_EXCL)) == -1){
-        perror_exit_server("A server already exists...");
-    }
+    
     
     /* Initializing the matrix. */
     matrix_init(matrix_pointer, N, M);
