@@ -75,7 +75,7 @@ At the end of each game the clients will be asked if they want to play another g
 they will have to write 'y' or 'Y' and if not 'n' or 'N'.
 Possible actions on the client:
 - CTRL+C: equivalent to desktop withdrawal, inform the server of its withdrawal and finish.
-- Closing Terminal: same behavior as CTRL+C.
+- Terminal Closure: same behavior as CTRL+C.
 
 ## Compile Instructions
 Once the compressed folder has been downloaded and extracted, open a terminal and issue the command: 
