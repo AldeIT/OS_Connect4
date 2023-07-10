@@ -19,6 +19,7 @@ void perror_exit_client(char * string){
     exit(-1);
 }
 
+
 /// @brief Handler for the SIGUSR1
 /// @param sig The value of the signal
 void sigusr1_handler(int sig){
@@ -47,8 +48,10 @@ void sigusr1_handler(int sig){
 
         /* Checking the symbol of the winner. */
         if (shm_info_attach[9] == symbol){
-            if (!play_automatic)
+            if (!play_automatic){
+                print_matrix(shm_matrix_attach, N, M);
                 printf("I have won!\n");
+            }
             flag_isover = 1;
         }else{
             if(!play_automatic){
@@ -84,7 +87,7 @@ void sigint_handler(int sig){
 
 /// @brief Handler for SIGALRM
 /// @param sig The value of the signal
-void sigalrm_handler(int sig){
+void sigalarm_handler(int sig){
     flag_turn_expired = 1;
     printf("Your time is expired.\n");
     kill(getpid(), SIGINT); /* temporary */
@@ -101,10 +104,13 @@ int main(int argc, char const *argv[])
 
     /* Checking if the third argument is valid. */    
     if (argc == 3){
-        if (argv[2][0] == '*')
+        if (strlen(argv[2])==1 && argv[2][0] == '*')
             create_son = 1;
-        else
-            perror_exit_client("Wrong argument");
+        else{
+            printf("Can't recognize optional argument...\n");
+            exit(-1);
+        }
+            
     }
 
     /* Creating the son. */
@@ -121,7 +127,7 @@ int main(int argc, char const *argv[])
     if (signal(SIGUSR1, sigusr1_handler) == SIG_ERR)
         perror_exit_client("Error Handling SIGUSR1\n");
     
-    if (signal(SIGALRM, sigalrm_handler) == SIG_ERR)
+    if (signal(SIGALRM, sigalarm_handler) == SIG_ERR)
         perror_exit_client("Error Handling SIGALRM\n");
 
     if (signal(SIGUSR2, sigusr2_handler) == SIG_ERR)
@@ -135,6 +141,7 @@ int main(int argc, char const *argv[])
     int sem_mutex;
     int sem_sync;
     int shm_info;
+    char colInsert[10];
 
     /* Semops for the mutex. */
     struct sembuf sops_mutex[3];
@@ -147,9 +154,10 @@ int main(int argc, char const *argv[])
     sops_mutex[1].sem_op  = 1;
     sops_mutex[1].sem_flg = 0;
 
+    int sem_mutex_key = ftok("key.txt", SEMMUTEX_KEY);
     /* Checking if the mutex semaphore exist and getting it. */
-    if((sem_mutex = semget(SEMMUTEX_KEY, 0, 0)) == -1)
-        perror_exit_client("Error getting the mutex");
+    if((sem_mutex = semget(sem_mutex_key, 0, 0)) == -1)
+        perror_exit_client("There is no Server...");
 
     /* Getting mutex. */
     if((semop(sem_mutex, &sops_mutex[0], 1)) == -1)
@@ -157,8 +165,9 @@ int main(int argc, char const *argv[])
         
     /* start: cs */
 
+    int shm_info_key = ftok("key.txt", SHMINFO_KEY);
     /* Getting the shm that contains all the info. */
-    if ((shm_info = shmget(SHMINFO_KEY, sizeof(int) * 12, 0)) == -1)
+    if ((shm_info = shmget(shm_info_key, sizeof(int) * 12, 0)) == -1)
         perror_exit_client("Info Shared Memory...");
 
     /* Attaching to the above shm. */
@@ -167,9 +176,25 @@ int main(int argc, char const *argv[])
 
     /* Getting all the needed data from the shm. */
     int index = shm_info_attach[0]++; 
+    if (index == 0) write(1, "Waiting for the other player to join...\n", strlen("Waiting for the other player to join...\n"));
+    
+    if (index == 1 && !play_automatic && create_son){
+        write(1, "Can't play with the computer when another user is already in the game!\n", strlen("Can't play with the computer when another user is already in the game!\n"));
+        shm_info_attach[0]--;
+        kill(pid_son, SIGKILL);
+        /* Releasing mutex. */
+        if((semop(sem_mutex, &sops_mutex[1], 1)) == -1)
+            perror_exit_client("Error Mutex Exit...");
+        exit(-1);
+
+    }
 
     if (index>=2){
         printf("There are already 2 players...\n");
+        shm_info_attach[0] = 2;
+        /* Releasing mutex. */
+        if((semop(sem_mutex, &sops_mutex[1], 1)) == -1)
+            perror_exit_client("Error Mutex Exit...");
         exit(-1);
     }
 
@@ -183,6 +208,7 @@ int main(int argc, char const *argv[])
 
     /* end: cs */
 
+    
     /* Releasing mutex. */
     if((semop(sem_mutex, &sops_mutex[1], 1)) == -1)
         perror_exit_client("Error Mutex Exit...");
@@ -202,17 +228,26 @@ int main(int argc, char const *argv[])
     if ((shm_matrix_attach = (int *)shmat(shm_matrix, NULL, 0)) == NULL)
         perror_exit_client("Attaching info Shared Memory...");       
 
+    int sem_sync_key = ftok("key.txt", SEMSYNC_KEY);
     /* Getting the sync semaphore. */
-    if((sem_sync = semget(SEMSYNC_KEY, 0, 0)) == -1)
+    if((sem_sync = semget(sem_sync_key, 0, 0)) == -1)
         perror_exit_client("Error getting the sem_sync..."); 
 
     /* Unlocking the server. */
     if((semop(sem_sync, &sops[0], 1)) == -1)
         perror_exit_client("Error waking up the server...");
+    
+    
 
     /* Locking myself. */
-    if((semop(sem_sync, &sops[1], 1)) == -1)
+    if((semop(sem_sync, &sops[1], 1)) == -1){
+        if (errno == EIDRM){
+            printf("The server closed the game...\n");
+            exit(0);
+        }
         perror_exit_client("Error blocking myself...");
+    }
+        
 
     /* Declarations. */
     int col;
@@ -240,8 +275,13 @@ int main(int argc, char const *argv[])
                     flag_turn_expired = 0;
                     printf("Insert the column number: ");
                     alarm(timer);  /* Giving myself timer seconds to make the move (0 is ignored). */
-                    scanf("%d", &col);
-                    alarm(0);
+                    
+                    scanf("%s", colInsert);
+                    if (!isNumeric(colInsert)){
+                        col = -1;
+                    }else col = atoi(colInsert);
+                    
+                    alarm(0); /* Deactivating the timer */
                 }
 
                 if (flag_turn_expired){
@@ -272,7 +312,18 @@ int main(int argc, char const *argv[])
             /* Asking players if they wanna play again. */
             do{
                 printf("Wanna play again? y/n: ");
-                scanf(" %c", &choice);
+
+                if(scanf(" %c", &choice)){
+                    int c;
+                    while ((c = getchar()) != '\n' && c != EOF) {
+                        choice = 'z';
+                    }
+
+                    if (choice == 'z'){
+                        printf("Your choice should either be a 'y' or a 'n' ...\n");
+                    }
+                }
+
             }while(choice != 'y' && choice != 'Y' && choice != 'n' && choice != 'N');
 
             if(choice == 'y' || choice == 'Y'){
@@ -306,3 +357,10 @@ int main(int argc, char const *argv[])
 
     return 0;
 }
+
+
+/************************************
+*VR471346, VR471414, VR471404
+*Aldegheri Alessandro, Venturi Davide, Zerman Nicolò
+*15/04/2023
+*************************************/
