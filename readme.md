@@ -18,6 +18,7 @@ This project was developed as the final project for our Operating Systems class 
 
 ## Technology Stack
 - C
+
 Everything is written in standard C. All mechanisms of Inter-Process-Communication are implemented with System V System Calls (Semaphores, Shared Memories, Signals). 
 
 ## Server
